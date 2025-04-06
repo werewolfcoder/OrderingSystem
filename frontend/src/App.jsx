@@ -7,6 +7,7 @@ import RestaurantMenu from './pages/RestaurantMenu'
 import PaymentPage from './pages/PaymentPage'
 import AdminPage from './pages/AdminPage' // Import AdminPage
 import UpdateMenu from './pages/UpdateMenu' // Import UpdateMenu
+import ManageMenu from './pages/ManageMenu' // Import ManageMenu
 import { OrderProvider } from './context/OrderContext'
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
           <Route path="/payment" element={<PaymentPage />} />
           <Route path="/admin" element={<AdminPage />} /> {/* Add AdminPage route */}
           <Route path="/admin/menu" element={<UpdateMenu />} /> {/* Add UpdateMenu route */}
+          <Route path="/admin/manage-menu" element={<ManageMenu />} /> {/* Add ManageMenu route */}
         </Routes>
       </Router>
     </OrderProvider>

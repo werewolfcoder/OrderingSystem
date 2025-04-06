@@ -1,16 +1,12 @@
-const mongoose = require('mongoose');
-const dbString = process.env.DB_CONNECT || 'mongodb://localhost:27017/orderingSystem'; // Default to local MongoDB if not provided
+const mongoose = require('mongoose')
 
-function connectToDb() {
-  mongoose
-    .connect(dbString, {
-    })
-    .then(() => {
-      console.log('Connected to the database');
-    })
-    .catch((err) => {
-      console.error('Database connection error:', err);
-    });
+
+function connectToDb(){
+    mongoose.connect(process.env.DB_CONNECT).then(()=>
+    {
+        console.log('connect to db ');
+    }).catch(err=>console.log(err));
 }
 
-module.exports = connectToDb;
+
+module.exports = connectToDb

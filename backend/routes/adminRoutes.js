@@ -1,77 +1,308 @@
 const express = require('express');
+const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const FoodItem = require('../models/foodModel'); // Correctly import the FoodItem model
-
-const router = express.Router();
+const fs = require('fs');
+const mongoose = require('mongoose');
+const { body, validationResult } = require('express-validator');
+const Category = require('../models/categoryModel');
+const Menu = require('../models/menuModel');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '../Food_Images/')); // Save images in the foods folder
+    cb(null, 'uploads/food-images/');
   },
   filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`); // Unique filename
-  },
-});
-
-const upload = multer({ storage });
-
-// Route to get all food items
-router.get('/menu', async (req, res) => {
-  try {
-    const foodData = await FoodItem.find(); // Fetch all food items
-    res.status(200).json(foodData); // Send the data as JSON
-  } catch (error) {
-    console.error('Error fetching menu data:', error);
-    res.status(500).json({ message: 'Failed to fetch menu data' });
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'food-' + uniqueSuffix + path.extname(file.originalname));
   }
 });
 
-// Route to add a new food item with image handling
-router.post('/add', upload.single('image'), async (req, res) => {
-  try {
-    const { category, name, description, price } = req.body;
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    
+    if (extname && mimetype) {
+      return cb(null, true);
+    }
+    cb(new Error('Only image files are allowed!'));
+  }
+});
 
-    // Validate required fields
-    if (!category || !name || !description || !price) {
-      return res.status(400).json({ message: 'All fields are required' });
+
+router.post('/addItem', upload.single('image'), [
+  body('categoryId').notEmpty().withMessage('Category ID is required'),
+  body('name').notEmpty().withMessage('Name is required'),
+  body('price').notEmpty().withMessage('Price is required'),
+  body('description').notEmpty().withMessage('Description is required'),
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
     }
 
-    const imagePath = req.file ? `/Food_Images/${req.file.filename}` : ''; // Save image path if uploaded
+    if (!req.file) {
+      return res.status(400).json({ message: 'Food image is required' });
+    }
 
-    const newFoodItem = new FoodItem({ category, name, description, price, image: imagePath });
-    await newFoodItem.save();
-    res.status(201).json({ message: 'Food item added successfully', foodItem: newFoodItem });
+    const { categoryId, name, price, description } = req.body;
+    
+    // Verify if categoryId is valid MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+      return res.status(400).json({ message: 'Invalid category ID format' });
+    }
+
+    const imageUrl = `/uploads/food-images/${req.file.filename}`;
+
+    const category = await Category.findById(categoryId);
+    if (!category) {
+      return res.status(404).json({ message: 'Category not found' });
+    }
+
+    const newItem = new Menu({
+      category: categoryId,
+      name,
+      price: parseFloat(price),
+      description,
+      imageUrl
+    });
+
+    await newItem.save();
+    res.status(201).json({
+      message: 'Menu item added successfully',
+      item: newItem 
+    });
+
   } catch (error) {
-    console.error('Error adding food item:', error); // Log the error for debugging
-    res.status(500).json({ message: 'Failed to add food item' });
+    console.error('Error creating menu item:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
-// Route to update a food item
-router.put('/update/:id', async (req, res) => {
-  try {
+router.delete('/deleteItem/:id', async (req, res) => {
     const { id } = req.params;
-    const updatedData = req.body;
-    const updatedFoodItem = await FoodItem.findByIdAndUpdate(id, updatedData, { new: true });
-    res.status(200).json({ message: 'Food item updated successfully', foodItem: updatedFoodItem });
-  } catch (error) {
-    console.error('Error updating food item:', error);
-    res.status(500).json({ message: 'Failed to update food item' });
-  }
-});
+  
+    // Validate ID
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid item ID.' });
+    }
+  
+    try {
+      // Find item in DB
+      const item = await Menu.findById(id);
+      if (!item) {
+        return res.status(404).json({ message: 'Menu item not found.' });
+      }
+  
+      // Delete image file if exists
+      if (item.imageUrl) {
+        const imagePath = path.join(__dirname, '..', item.imageUrl);
+        if (fs.existsSync(imagePath)) {
+          fs.unlinkSync(imagePath);
+        }
+      }
+  
+      // Delete item from DB
+      await Menu.findByIdAndDelete(id);
+  
+      res.status(200).json({ message: 'Menu item and image deleted successfully.' });
+  
+    } catch (error) {
+      console.error('Error deleting menu item:', error);
+      res.status(500).json({ message: 'Internal server error.' });
+    }
+  });
 
-// Route to delete a food item
-router.delete('/remove/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    await FoodItem.findByIdAndDelete(id);
-    res.status(200).json({ message: 'Food item deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting food item:', error);
-    res.status(500).json({ message: 'Failed to delete food item' });
-  }
-});
+  router.put('/updateItem/:id', upload.single('image'), [
+    body('name').notEmpty().withMessage('Name is required'),
+    body('price').notEmpty().isNumeric().withMessage('Price must be a number'),
+    body('description').notEmpty().withMessage('Description is required'),
+    body('categoryId').notEmpty().isMongoId().withMessage('Valid category ID is required'),
+  ], async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+  
+      const itemId = req.params.id;
+      const { name, price, description, categoryId } = req.body;
+  
+      const existingItem = await Menu.findById(itemId);
+      if (!existingItem) {
+        return res.status(404).json({ message: 'Menu item not found' });
+      }
+  
+      // Handle image replacement
+      let imageUrl = existingItem.imageUrl;
+      if (req.file) {
+        // Delete old image
+        if (imageUrl && fs.existsSync(path.join(__dirname, '..', imageUrl))) {
+          fs.unlinkSync(path.join(__dirname, '..', imageUrl));
+        }
+        imageUrl = `/uploads/food-images/${req.file.filename}`;
+      }
+  
+      // Update item
+      existingItem.name = name;
+      existingItem.price = parseFloat(price);
+      existingItem.description = description;
+      existingItem.category = categoryId;
+      existingItem.imageUrl = imageUrl;
+  
+      await existingItem.save();
+  
+      res.status(200).json({
+        message: 'Menu item updated successfully',
+        item: existingItem
+      });
+  
+    } catch (err) {
+      console.error('Error updating item:', err);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+
+router.get('/getItems', async (req, res) => {
+    try {
+      const items = await Menu.find().populate('category', 'name'); // Populating category name
+      res.status(200).json({ success: true, items });
+    } catch (error) {
+      console.error('Error fetching items:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch items. Please try again later.' });
+    }
+  });
+
+router.get('/getCategories', async (req, res) => {
+    try {
+      const categories = await Category.find();
+      res.status(200).json({
+        success: true,
+        categories
+      });
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  });
+
+  router.post('/addCategory', [
+    body('name')
+      .trim()
+      .notEmpty()
+      .withMessage('Category name is required')
+  ], async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+  
+    const { name } = req.body;
+  
+    try {
+      // ✅ Check if category already exists
+      const existing = await Category.findOne({ name: { $regex: `^${name}$`, $options: 'i' } });
+      if (existing) {
+        return res.status(409).json({ message: 'Category already exists' });
+      }
+  
+      // ✅ Create and save category
+      const newCategory = new Category({ name });
+      await newCategory.save();
+  
+      res.status(201).json({
+        message: 'Category created successfully',
+        category: newCategory
+      });
+  
+    } catch (error) {
+      console.error('Error creating category:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  router.delete('/deleteCategory/:id', async (req, res) => {
+    const categoryId = req.params.id;
+  
+    if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+      return res.status(400).json({ message: 'Invalid category ID' });
+    }
+  
+    try {
+      // Check if any menu item is using this category
+      const menuItems = await Menu.find({ category: categoryId });
+  
+      if (menuItems.length > 0) {
+        return res.status(400).json({
+          message: 'Cannot delete category. It is associated with existing menu items.',
+        });
+      }
+  
+      const deletedCategory = await Category.findByIdAndDelete(categoryId);
+  
+      if (!deletedCategory) {
+        return res.status(404).json({ message: 'Category not found' });
+      }
+  
+      res.status(200).json({
+        message: 'Category deleted successfully',
+        category: deletedCategory,
+      });
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+  
+  router.put('/updateCategory/:id',
+    [
+      body('name').trim().notEmpty().withMessage('Category name is required'),
+    ],
+    async (req, res) => {
+      const categoryId = req.params.id;
+  
+      if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+        return res.status(400).json({ message: 'Invalid category ID' });
+      }
+  
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+  
+      const { name } = req.body;
+  
+      try {
+        const updatedCategory = await Category.findByIdAndUpdate(
+          categoryId,
+          { name },
+          { new: true }
+        );
+  
+        if (!updatedCategory) {
+          return res.status(404).json({ message: 'Category not found' });
+        }
+  
+        res.status(200).json({
+          message: 'Category name updated successfully',
+          category: updatedCategory,
+        });
+      } catch (error) {
+        console.error('Error updating category:', error);
+        res.status(500).json({ message: 'Internal server error' });
+      }
+    }
+  );
+  
 
 module.exports = router;
