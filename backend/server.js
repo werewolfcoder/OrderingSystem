@@ -17,7 +17,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Enable CORS for Express
 app.use(cors({
-  origin: ["http://localhost:5173", "https://v4knw1n1-5173.inc1.devtunnels.ms"],
+  origin: ["http://localhost:5173", "https://v4knw1n1-5173.inc1.devtunnels.ms","https://ordering-system-peach.vercel.app/"],
   credentials: true
 }));
 
