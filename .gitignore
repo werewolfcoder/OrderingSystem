@@ -1,0 +1,58 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment files
+.env
+**/.env
+.env.local
+.env.*.local
+
+# Build outputs
+dist/
+build/
+**/dist/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+
+# IDE and Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+*.bak
+
+# Uploaded files and media
+uploads/
+**/uploads/
+uploads/food-images/
+
+# Debug files
+debug/
+.debug/
+
+# Test coverage
+coverage/
+
+# Security files
+*.pem
+*.key
+*.crt
+
+# MongoDB local files
+*.mongodb
+.mongodb/
+
+# Temporary files
+*.tmp
+*~

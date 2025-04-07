@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useOrder } from '../context/OrderContext';
+import { useOrder } from '../../context/OrderContext';
 import axios from 'axios';
 
 function RestaurantMenu() {

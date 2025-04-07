@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useOrder } from '../context/OrderContext';
+import { useOrder } from '../../context/OrderContext';
 import axios from 'axios';
+import { socket } from '../../socket';
 
 const PaytmPayment = () => {
   const location = useLocation();
@@ -14,27 +15,45 @@ const PaytmPayment = () => {
 
   const handlePayment = async () => {
     try {
-      const { data } = await axios.post('http://localhost:5000/payment', {
-        amount,
-        customerId,
-        orderId,
-      });
+      // First place the order
+      const orderData = {
+        items: Object.entries(cart).map(([itemId, quantity]) => {
+          const item = menuItems.find((item) => item._id === itemId);
+          return {
+            name: item.name,
+            price: item.price,
+            qty: quantity
+          };
+        }),
+        totalAmount: total,
+      };
 
-      const form = document.createElement('form');
-      form.setAttribute('method', 'post');
-      form.setAttribute('action', 'https://securegw-stage.paytm.in/order/process');
-      Object.keys(data).forEach((key) => {
-        const input = document.createElement('input');
-        input.setAttribute('type', 'hidden');
-        input.setAttribute('name', key);
-        input.setAttribute('value', data[key]);
-        form.appendChild(input);
-      });
+      const token = localStorage.getItem('guestToken');
+      const orderResponse = await axios.post(
+        `${import.meta.env.VITE_BASE_URL}/user/placeOrder`, 
+        orderData,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
 
-      document.body.appendChild(form);
-      form.submit();
+      if (orderResponse.data && orderResponse.data.order) {
+        // Emit new order event
+        socket.emit('new_order', orderResponse.data.order);
+        
+        // Navigate to order details page with order data
+        navigate('/order-details', { 
+          state: { 
+            order: orderResponse.data.order,
+          }
+        });
+      }
     } catch (error) {
-      console.error('Payment initiation failed:', error);
+      console.error('Order placement failed:', error);
+      alert('Failed to place order. Please try again.');
     }
   };
 

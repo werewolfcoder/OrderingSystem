@@ -1,13 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
+const jwt = require("jsonwebtoken");
 const path = require('path');
+const QRCode = require("qrcode");
 const fs = require('fs');
 const mongoose = require('mongoose');
 const { body, validationResult } = require('express-validator');
-const Category = require('../models/categoryModel');
-const Menu = require('../models/menuModel');
-
+const Category = require('../../models/categoryModel');
+const Menu = require('../../models/menuModel');
+const bcrypt = require("bcryptjs");
+const adminAuth = require("../../middleware/adminAuth");
+const { getHotelDb } = require("../../utils/dbSwitcher");
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -304,5 +308,64 @@ router.get('/getCategories', async (req, res) => {
     }
   );
   
+
+  router.post(
+    "/create-chef",
+    adminAuth,
+    [
+      body("chefId").notEmpty(),
+      body("password").isLength({ min: 4 }),
+    ],
+    async (req, res) => {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+  
+      const { chefId, password } = req.body;
+  
+      try {
+        const hotelDb = getHotelDb(req.admin.hotelName);
+        const Chef = hotelDb.model("Chef", require("../../models/chefModel"));
+  
+        const exists = await Chef.findOne({ chefId });
+        if (exists) return res.status(400).json({ msg: "Chef already exists." });
+  
+        const hashed = await bcrypt.hash(password, 10);
+        const newChef = new Chef({ chefId, password: hashed });
+  
+        await newChef.save();
+        res.status(201).json({ msg: "Chef created!" });
+      } catch (err) {
+        console.error("Chef creation failed:", err);
+        res.status(500).json({ msg: "Server error" });
+        res.status(500).json({msg:err});
+      }
+    }
+  );
+
+
+  router.get("/generate-qr", async (req, res) => {
+    try {
+      const { tableNumber } = req.query;
+  
+      if (!tableNumber) {
+        return res.status(400).json({ msg: "Table number is required" });
+      }
+  
+      // Assume you extract hotelName from admin's token (so it’s secure)
+      const token = req.headers.authorization?.split(" ")[1];
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const hotelName = decoded.hotelName;
+  
+      const qrUrl = `${process.env.FRONTEND_URL}/scan?hotel=${hotelName}&table=${tableNumber}`;
+      
+      // Generate QR image as Data URL
+      const qrImage = await QRCode.toDataURL(qrUrl);
+  
+      res.json({ qrImage, qrUrl }); // qrImage can be used as <img src="..." />
+    } catch (err) {
+      console.error("QR generation error:", err);
+      res.status(500).json({ msg: "Failed to generate QR code" });
+    }
+  });
 
 module.exports = router;
