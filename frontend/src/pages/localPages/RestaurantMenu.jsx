@@ -46,18 +46,12 @@ function RestaurantMenu() {
 
   useEffect(() => {
     const getCategories = async () => {
-      const token = localStorage.getItem('adminToken');
-    
-      if (!token) {
-        
-        setTimeout(() => navigate('/admin/login'), 2000);
-        return;
-      }
+      
       try {
         const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/admin/getCategories`,
          {
           headers: {
-            Authorization: token.startsWith('Bearer ') ? token : `Bearer ${token}`
+              Authorization: `Bearer ${guestToken}`,
           }
          }
         );
@@ -72,19 +66,13 @@ function RestaurantMenu() {
 
   useEffect(() => {
     const getMenuItems = async () => {
-      const token = localStorage.getItem('adminToken');
-    
-      if (!token) {
-        setQrStatus({ msg: 'Please login again', isError: true });
-        setTimeout(() => navigate('/admin/login'), 2000);
-        return;
-      }
+      
       try {
         const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/admin/getItems`,
           {
-            headers: {
-              Authorization: token.startsWith('Bearer ') ? token : `Bearer ${token}`
-            }
+          headers: {
+              Authorization: `Bearer ${guestToken}`,
+          }
            }
         );
         setMenuItems(response.data.items);
