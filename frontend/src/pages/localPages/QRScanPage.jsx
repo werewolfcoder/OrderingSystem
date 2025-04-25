@@ -11,8 +11,8 @@ export default function QRScanPage() {
     const table = params.get("table");
 
     const fetchTokenAndRedirect = async () => {
-      try {
-        const response = await axios.post("http://localhost:5000/user/getTokenFromQR", {
+     try {
+        const response = await axios.post(`${import.meta.env.VITE_BASE_URL}/user/getTokenFromQR`, {
           hotelName: hotel,
           tableNumber: table,
         });
