@@ -49,7 +49,7 @@ function RestaurantMenu() {
       const token = localStorage.getItem('adminToken');
     
       if (!token) {
-        setQrStatus({ msg: 'Please login again', isError: true });
+        
         setTimeout(() => navigate('/admin/login'), 2000);
         return;
       }
