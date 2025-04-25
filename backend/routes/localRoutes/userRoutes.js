@@ -41,9 +41,9 @@ router.post("/placeOrder", async (req, res) => {
       }
   
       const newOrder = new Order({
-        tableNumber,
         items,
         totalAmount,
+        tableNumber,
         status: "pending",
         timestamp: new Date()
       });
@@ -61,6 +61,29 @@ router.post("/placeOrder", async (req, res) => {
       console.error("Order placement error:", err);
       res.status(500).json({ msg: "Server error" });
     }
+});
+
+router.get("/getOrder/:orderId", async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) return res.status(401).json({ msg: "No token provided." });
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const { hotelName } = decoded;
+
+    const db = getHotelDb(hotelName);
+    const Order = db.model("Order", orderSchema);
+
+    const order = await Order.findById(req.params.orderId);
+    if (!order) {
+      return res.status(404).json({ msg: "Order not found." });
+    }
+
+    res.json({ success: true, order });
+  } catch (err) {
+    console.error("Error fetching order:", err);
+    res.status(500).json({ msg: "Server error" });
+  }
 });
   
 module.exports = router;

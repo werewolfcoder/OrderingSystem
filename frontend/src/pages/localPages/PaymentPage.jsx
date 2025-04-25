@@ -13,25 +13,84 @@ const PaytmPayment = () => {
   const [orderId, setOrderId] = useState(`ORDER_${new Date().getTime()}`);
   const [customerId, setCustomerId] = useState(`CUST_${new Date().getTime()}`);
 
+  // const handlePayment = async () => {
+  //   try {
+  //     // First place the order
+  //     const orderData = {
+  //       items: Object.entries(cart).map(([itemId, quantity]) => {
+  //         const items = menuItems.find((item) => item._id === itemId);
+  //         return {
+  //           name: items.name,
+  //           qty: quantity,
+  //           price: items.price
+  //         };
+  //       }),
+  //       totalAmount: total,
+  //     };
+
+  //     const token = localStorage.getItem('guestToken');
+  //     const orderResponse = await axios.post(
+  //       `${import.meta.env.VITE_BASE_URL}/user/placeOrder`, 
+  //       {items:orderData.items,totalAmount:orderData.totalAmount},
+  //       {
+  //         headers: {
+  //           'Content-Type': 'application/json',
+  //           'Authorization': `Bearer ${token}`
+  //         }
+  //       }
+  //     );
+
+  //     if (orderResponse.data && orderResponse.data.order) {
+  //       // Emit new order event
+  //       socket.emit('new_order', orderResponse.data.order);
+        
+  //       // Navigate to order details page with order data
+  //       navigate('/order-details', { 
+  //         state: { 
+  //           order: orderResponse.data.order,
+  //         }
+  //       });
+  //     }
+  //   } catch (error) {
+  //     console.error('Order placement failed:', error);
+  //     alert('Failed to place order. Please try again.');
+  //   }
+  // };
   const handlePayment = async () => {
     try {
+      console.log("Starting order placement...");
+      
+      // Log the cart data to verify it's correct
+      console.log("Cart contents:", cart);
+      console.log("Menu items:", menuItems);
+      
       // First place the order
       const orderData = {
         items: Object.entries(cart).map(([itemId, quantity]) => {
           const item = menuItems.find((item) => item._id === itemId);
+          console.log(`Processing item ${itemId}:`, item);
+          if (!item) {
+            console.error(`Item ${itemId} not found in menuItems!`);
+            return null; // This will cause issues later but helps identify the problem
+          }
           return {
             name: item.name,
-            price: item.price,
-            qty: quantity
+            qty: quantity,
+            price: item.price
           };
         }),
         totalAmount: total,
       };
-
+      
+      // Log the constructed order data
+      console.log("Order data being sent:", orderData);
+      
       const token = localStorage.getItem('guestToken');
+      console.log("Token being used:", token ? token.substring(0, 10) + "..." : "No token");
+      
       const orderResponse = await axios.post(
-        `${import.meta.env.VITE_BASE_URL}/user/placeOrder`, 
-        orderData,
+        `${import.meta.env.VITE_BASE_URL}/user/placeOrder`,
+        {items: orderData.items, totalAmount: orderData.totalAmount},
         {
           headers: {
             'Content-Type': 'application/json',
@@ -39,24 +98,32 @@ const PaytmPayment = () => {
           }
         }
       );
-
+      
+      console.log("Order response:", orderResponse.data);
+      
       if (orderResponse.data && orderResponse.data.order) {
+        console.log("Order successfully placed. Order ID:", orderResponse.data.order._id);
+        
         // Emit new order event
         socket.emit('new_order', orderResponse.data.order);
+        console.log("Socket event emitted");
         
         // Navigate to order details page with order data
-        navigate('/order-details', { 
-          state: { 
+        navigate('/order-details', {
+          state: {
             order: orderResponse.data.order,
           }
         });
+      } else {
+        console.warn("Order response doesn't contain expected data:", orderResponse.data);
+        alert('Unexpected server response. Please check console for details.');
       }
     } catch (error) {
       console.error('Order placement failed:', error);
-      alert('Failed to place order. Please try again.');
+      console.error('Error details:', error.response?.data || error.message);
+      alert('Failed to place order. Please check console for details.');
     }
   };
-
   return (
     <div className="p-4 max-w-3xl mx-auto">
       <button 

@@ -16,6 +16,8 @@ import QRScanPage from './pages/localPages/QRScanPage'
 import OrderDetails from './pages/localPages/OrderDetails' // Import OrderDetails
 import ChefDashboard from './pages/localPages/ChefDashboard' // Import ChefDashboard
 import ProtectedChefRoute from './components/ProtectedChefRoute';
+import AdminOrderHistory from './pages/localPages/AdminOrderHistory';
+import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 
 function App() {
   return (
@@ -24,11 +26,8 @@ function App() {
         <Routes>
           <Route path="/" element={<RestaurantMenu />} />
           <Route path="/payment" element={<PaymentPage />} />
-          <Route path="/admin" element={<AdminPage />} /> {/* Add AdminPage route */}
           <Route path="/admin/register" element={<AdminRegister />} /> {/* New registration route */}
           <Route path="/admin/login" element={<AdminLogin />} /> {/* New login route */}
-          <Route path="/admin/menu" element={<UpdateMenu />} /> {/* Add UpdateMenu route */}
-          <Route path="/admin/manage-menu" element={<ManageMenu />} /> {/* Add ManageMenu route */}
           <Route path="/scan" element={<QRScanPage />} />
           <Route path="/chef/login" element={<ChefLogin />} /> {/* Add ChefLogin route */}
           <Route 
@@ -40,6 +39,26 @@ function App() {
             } 
           />
           <Route path="/order-details" element={<OrderDetails />} /> {/* Add OrderDetails route */}
+          <Route path="/admin" element={
+            <ProtectedAdminRoute>
+              <AdminPage />
+            </ProtectedAdminRoute>
+          } />
+          <Route path="/admin/menu" element={
+            <ProtectedAdminRoute>
+              <UpdateMenu />
+            </ProtectedAdminRoute>
+          } />
+          <Route path="/admin/manage-menu" element={
+            <ProtectedAdminRoute>
+              <ManageMenu />
+            </ProtectedAdminRoute>
+          } />
+          <Route path="/admin/orders" element={
+            <ProtectedAdminRoute>
+              <AdminOrderHistory />
+            </ProtectedAdminRoute>
+          } />
         </Routes>
       </Router>
     </OrderProvider>

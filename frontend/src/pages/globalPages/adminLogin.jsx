@@ -22,7 +22,9 @@ const AdminLogin = () => {
       );
 
       if (response.data && response.data.token) {
+        console.log(response.data.token);
         localStorage.setItem('adminToken', response.data.token);
+        
         setStatus({ msg: 'Login successful!', isError: false });
         setTimeout(() => {
           navigate('/admin');

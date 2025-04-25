@@ -1,13 +1,42 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { socket } from '../../socket';
+import axios from 'axios';
 
 const OrderDetails = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { order } = location.state || {};
-  const [currentStatus, setCurrentStatus] = useState(order?.status);
+  const { order: initialOrder } = location.state || {};
+  const [order, setOrder] = useState(initialOrder);
+  const [currentStatus, setCurrentStatus] = useState(initialOrder?.status);
   const [statusNotification, setStatusNotification] = useState('');
+
+  useEffect(() => {
+    const fetchOrder = async () => {
+      if (!initialOrder?._id) return;
+      
+      try {
+        const token = localStorage.getItem('guestToken');
+        const response = await axios.get(
+          `${import.meta.env.VITE_BASE_URL}/user/getOrder/${initialOrder._id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+        
+        if (response.data.success) {
+          setOrder(response.data.order);
+          setCurrentStatus(response.data.order.status);
+        }
+      } catch (error) {
+        console.error('Failed to fetch order:', error);
+      }
+    };
+
+    fetchOrder();
+  }, [initialOrder?._id]);
 
   useEffect(() => {
     // Join order-specific room

@@ -14,8 +14,10 @@
     "bcrypt": "^5.1.1",
     "bcryptjs": "^3.0.2",
     "body-parser": "^2.2.0",
+    "chart.js": "^4.4.9",
     "cors": "^2.8.5",
     "crypto-js": "^4.2.0",
+    "date-fns": "^4.1.0",
     "dotenv": "^16.4.7",
     "express": "^5.1.0",
     "express-validator": "^7.2.1",
@@ -25,6 +27,7 @@
     "nodemon": "^3.1.9",
     "paytmchecksum": "^1.5.1",
     "qrcode": "^1.5.4",
+    "react-chartjs-2": "^5.3.0",
     "request": "^2.88.2",
     "socket.io": "^4.8.1"
   }

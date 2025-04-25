@@ -17,9 +17,22 @@ const ManageMenu = () => {
     fetchCategories();
   }, []);
 
+  const getAuthHeader = () => {
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+      setStatusMessage({ text: 'Please login again', isError: true });
+      setTimeout(() => navigate('/admin/login'), 2000);
+      return null;
+    }
+    return { Authorization: token.startsWith('Bearer ') ? token : `Bearer ${token}` };
+  };
+
   const fetchMenuItems = async () => {
+    const headers = getAuthHeader();
+    if (!headers) return;
+
     try {
-      const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/admin/getItems`);
+      const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/admin/getItems`, { headers });
       setMenuItems(response.data.items);
     } catch (error) {
       console.error('Error fetching menu items:', error);
@@ -27,8 +40,11 @@ const ManageMenu = () => {
   };
 
   const fetchCategories = async () => {
+    const headers = getAuthHeader();
+    if (!headers) return;
+
     try {
-      const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/admin/getCategories`);
+      const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/admin/getCategories`, { headers });
       setCategories(response.data.categories);
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -36,8 +52,11 @@ const ManageMenu = () => {
   };
 
   const handleDelete = async (id) => {
+    const headers = getAuthHeader();
+    if (!headers) return;
+
     try {
-      await axios.delete(`${import.meta.env.VITE_BASE_URL}/admin/deleteItem/${id}`);
+      await axios.delete(`${import.meta.env.VITE_BASE_URL}/admin/deleteItem/${id}`, { headers });
       setMenuItems(prevItems => prevItems.filter(item => item._id !== id));
       setStatusMessage({ text: 'Item deleted successfully', isError: false });
       setTimeout(() => setStatusMessage({ text: '', isError: false }), 3000);
@@ -58,6 +77,9 @@ const ManageMenu = () => {
 
   const handleUpdate = async (e) => {
     e.preventDefault();
+    const headers = getAuthHeader();
+    if (!headers) return;
+
     try {
       const formData = new FormData();
       formData.append('categoryId', editingItem.category);
@@ -72,7 +94,10 @@ const ManageMenu = () => {
         `${import.meta.env.VITE_BASE_URL}/admin/updateItem/${editingItem._id}`,
         formData,
         {
-          headers: { 'Content-Type': 'multipart/form-data' }
+          headers: {
+            ...headers,
+            'Content-Type': 'multipart/form-data'
+          }
         }
       );
 
@@ -93,6 +118,9 @@ const ManageMenu = () => {
   };
 
   const handleUpdateCategory = async (categoryId) => {
+    const headers = getAuthHeader();
+    if (!headers) return;
+
     try {
       const newName = editingCategories[categoryId];
       if (!newName || newName.trim() === '') {
@@ -100,9 +128,11 @@ const ManageMenu = () => {
         return;
       }
 
-      await axios.put(`${import.meta.env.VITE_BASE_URL}/admin/updateCategory/${categoryId}`, {
-        name: newName
-      });
+      await axios.put(
+        `${import.meta.env.VITE_BASE_URL}/admin/updateCategory/${categoryId}`,
+        { name: newName },
+        { headers }
+      );
 
       setStatusMessage({ text: 'Category updated successfully', isError: false });
       fetchCategories();
@@ -116,8 +146,14 @@ const ManageMenu = () => {
   };
 
   const handleDeleteCategory = async (categoryId) => {
+    const headers = getAuthHeader();
+    if (!headers) return;
+
     try {
-      await axios.delete(`${import.meta.env.VITE_BASE_URL}/admin/deleteCategory/${categoryId}`);
+      await axios.delete(
+        `${import.meta.env.VITE_BASE_URL}/admin/deleteCategory/${categoryId}`,
+        { headers }
+      );
       setStatusMessage({ text: 'Category deleted successfully', isError: false });
       fetchCategories();
     } catch (error) {

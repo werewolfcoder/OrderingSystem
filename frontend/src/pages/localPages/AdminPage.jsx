@@ -44,6 +44,8 @@ const AdminPage = () => {
       }, 2000);
     } catch (error) {
       console.error('Chef creation error:', error);
+      
+      console.log(error.response.data.msg);
       setStatus({ 
         msg: error.response?.data?.msg || 'Failed to create chef', 
         isError: true 
@@ -99,9 +101,23 @@ const AdminPage = () => {
     document.body.removeChild(link);
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('adminToken');
+    navigate('/admin/login');
+  };
+
   return (
     <div className="p-4">
-      <h1 className="text-3xl font-bold text-center">Admin Dashboard</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+        <button
+          onClick={handleLogout}
+          className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+        >
+          Logout
+        </button>
+      </div>
+
       <p className="text-center text-gray-600 mt-2">
         Manage your restaurant's menu, orders, and more.
       </p>
@@ -125,7 +141,10 @@ const AdminPage = () => {
           <p className="text-gray-600 mt-2">
             Check and manage customer orders in real-time.
           </p>
-          <button className="mt-4 px-4 py-2 bg-gray-800 text-white rounded">
+          <button 
+            onClick={() => navigate('/admin/orders')}
+            className="mt-4 px-4 py-2 bg-gray-800 text-white rounded"
+          >
             Go to Orders
           </button>
         </div>

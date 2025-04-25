@@ -11,6 +11,8 @@ const AdminRegister = () => {
     password: '',
   });
   const [status, setStatus] = useState({ msg: '', isError: false });
+  const [showCredentials, setShowCredentials] = useState(false);
+  const [credentials, setCredentials] = useState({ username: '', password: '' });
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -20,22 +22,28 @@ const AdminRegister = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Adjust the endpoint as needed
       const response = await axios.post(
         `${import.meta.env.VITE_BASE_URL}/global/register`,
         formData,
         { headers: { 'Content-Type': 'application/json' } }
       );
       setStatus({ msg: 'Registration successful!', isError: false });
-      setTimeout(() => {
-        navigate('/admin');
-      }, 2000);
+      setCredentials({
+        username: response.data.admin.username,
+        password: formData.password
+      });
+      setShowCredentials(true);
     } catch (err) {
       const errorMessage =
         err.response?.data?.msg || 'Registration failed. Please try again.';
       setStatus({ msg: errorMessage, isError: true });
       setTimeout(() => setStatus({ msg: '', isError: false }), 3000);
     }
+  };
+
+  const handleCredentialsConfirm = () => {
+    setShowCredentials(false);
+    navigate('/admin');
   };
 
   return (
@@ -103,6 +111,34 @@ const AdminRegister = () => {
           </span>
         </p>
       </div>
+
+      {showCredentials && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+            <h3 className="text-xl font-bold mb-4">Save Your Login Credentials</h3>
+            <p className="text-gray-600 mb-4">
+              Please save these credentials securely. You'll need them to log in:
+            </p>
+            <div className="bg-gray-50 p-4 rounded-md mb-4 font-mono">
+              <div className="mb-2">
+                <span className="font-semibold">Username:</span> {credentials.username}
+              </div>
+              <div>
+                <span className="font-semibold">Password:</span> {credentials.password}
+              </div>
+            </div>
+            <p className="text-sm text-red-500 mb-4">
+              ⚠️ Make sure to save these credentials! You won't see them again.
+            </p>
+            <button
+              onClick={handleCredentialsConfirm}
+              className="w-full py-2 px-4 bg-gray-800 text-white rounded hover:bg-gray-700"
+            >
+              I've Saved My Credentials
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

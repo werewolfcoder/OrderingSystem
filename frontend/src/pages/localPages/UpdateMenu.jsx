@@ -17,8 +17,19 @@ const UpdateMenu = () => {
   const [categories, setCategories] = useState([]);
   useEffect(() => {
     const getCategories = async () => {
+      const token = localStorage.getItem('adminToken');
+    
+    if (!token) {
+      setStatusMessage({ msg: 'Please login again', isError: true });
+      setTimeout(() => navigate('/admin/login'), 2000);
+      return;
+    }
       try {
-        const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/admin/getCategories`);
+        const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/admin/getCategories`,{
+          headers: {
+            Authorization: token.startsWith('Bearer ') ? token : `Bearer ${token}`
+          }
+        });
         setCategories(response.data.categories);
       } catch (error) {
         console.error('Error fetching categories:', error);
@@ -50,6 +61,13 @@ const UpdateMenu = () => {
     formData.append('image', newItem.image);
 
     try {
+      const token = localStorage.getItem('adminToken');
+    
+      if (!token) {
+        setQrStatus({ msg: 'Please login again', isError: true });
+        setTimeout(() => navigate('/admin/login'), 2000);
+        return;
+      }
       console.log('Form Data:', Object.fromEntries(formData)); // Better debugging
       const response = await axios.post(
         `${import.meta.env.VITE_BASE_URL}/admin/addItem`,
@@ -57,6 +75,7 @@ const UpdateMenu = () => {
         {
           headers: {
             'Content-Type': 'multipart/form-data',
+            Authorization: token.startsWith('Bearer ') ? token : `Bearer ${token}`
           },
         }
       );
@@ -88,24 +107,35 @@ const UpdateMenu = () => {
       setTimeout(() => setStatusMessage({ text: '', isError: false }), 3000);
       return;
     }
+    const token = localStorage.getItem('adminToken');
 
+    if (!token) {
+      setQrStatus({ msg: 'Please login again', isError: true });
+      setTimeout(() => navigate('/admin/login'), 2000);
+      return;
+    }
+    console.log(token); 
     try {
-      const response = await axios.post(
-        `${import.meta.env.VITE_BASE_URL}/admin/addCategory`,
-        { name: category },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
+      const response = await axios({
+        method: 'post',
+        url: `${import.meta.env.VITE_BASE_URL}/admin/addCategory`,
+        data: { name: category },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`
         }
-      );
+      });
 
-      if (response.data && response.data.category) {  // Changed condition to check for category in response
+      if (response.data.message=="Category created successfully") {  // Changed condition to check for category in response
         setStatusMessage({ text: 'Category added successfully!', isError: false });
         setCategory('');
         setShowCategoryModal(false);
         // Refresh categories list
-        const categoriesResponse = await axios.get(`${import.meta.env.VITE_BASE_URL}/admin/getCategories`);
+        const categoriesResponse = await axios.get(`${import.meta.env.VITE_BASE_URL}/admin/getCategories`,{
+          headers: {
+            'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`
+          }
+        });
         setCategories(categoriesResponse.data.categories);
       }
     } catch (error) {

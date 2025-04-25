@@ -26,7 +26,7 @@ const server = http.createServer(app);
 // Initialize Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:5173", "https://v4knw1n1-5173.inc1.devtunnels.ms"],
+    origin: ["http://localhost:5173", "https://v4knw1n1-5173.inc1.devtunnels.ms","https://ordering-system-peach.vercel.app"],
     methods: ["GET", "POST"],
     allowedHeaders: ["my-custom-header"],
     credentials: true

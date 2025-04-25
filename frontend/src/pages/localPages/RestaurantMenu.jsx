@@ -5,10 +5,62 @@ import axios from 'axios';
 
 function RestaurantMenu() {
   const [categories, setCategories] = useState([]);
+  const [menuItems, setMenuItems] = useState([]);
+  const [activeCategory, setActiveCategory] = useState('Appetizers');
+  const navigate = useNavigate();
+  const { cart, quantities, handleQuantityChange, handleAddToCart, clearCart, removeItem } = useOrder();
+
+  // Check for guest token
+  const guestToken = localStorage.getItem('guestToken');
+
+  if (!guestToken) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full text-center">
+          <div className="mb-6">
+            <svg 
+              className="w-16 h-16 mx-auto text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M12 4v6m0 2v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+              />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold mb-4 text-gray-800">Access Required</h2>
+          <p className="text-gray-600 mb-6">
+            Please scan the QR code at your table to access the menu and place orders.
+          </p>
+          <div className="text-sm text-gray-500">
+            If you're a restaurant staff member, please log in through the appropriate portal.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   useEffect(() => {
     const getCategories = async () => {
+      const token = localStorage.getItem('adminToken');
+    
+      if (!token) {
+        setQrStatus({ msg: 'Please login again', isError: true });
+        setTimeout(() => navigate('/admin/login'), 2000);
+        return;
+      }
       try {
-        const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/admin/getCategories`);
+        const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/admin/getCategories`,
+         {
+          headers: {
+            Authorization: token.startsWith('Bearer ') ? token : `Bearer ${token}`
+          }
+         }
+        );
         setCategories(response.data.categories);
       } catch (error) {
         console.error('Error fetching categories:', error);
@@ -18,11 +70,23 @@ function RestaurantMenu() {
     getCategories();
   }, []);
 
-  const [menuItems, setMenuItems] = useState([]);
   useEffect(() => {
     const getMenuItems = async () => {
+      const token = localStorage.getItem('adminToken');
+    
+      if (!token) {
+        setQrStatus({ msg: 'Please login again', isError: true });
+        setTimeout(() => navigate('/admin/login'), 2000);
+        return;
+      }
       try {
-        const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/admin/getItems`);
+        const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/admin/getItems`,
+          {
+            headers: {
+              Authorization: token.startsWith('Bearer ') ? token : `Bearer ${token}`
+            }
+           }
+        );
         setMenuItems(response.data.items);
       } catch (error) {
         console.error('Error fetching menu items:', error);
@@ -32,16 +96,6 @@ function RestaurantMenu() {
     getMenuItems();
   }, []);
   console.log('Menu Items:', menuItems); // Debugging line to check the fetched menu items
-  const [activeCategory, setActiveCategory] = useState('Appetizers');
-  const navigate = useNavigate();
-  const { 
-    cart, 
-    quantities, 
-    handleQuantityChange, 
-    handleAddToCart, 
-    clearCart, 
-    removeItem 
-  } = useOrder();
 
   const calculateTotal = () => {
     return Object.entries(cart).reduce((total, [itemId, quantity]) => {

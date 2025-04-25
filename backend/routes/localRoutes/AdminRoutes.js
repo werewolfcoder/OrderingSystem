@@ -7,8 +7,8 @@ const QRCode = require("qrcode");
 const fs = require('fs');
 const mongoose = require('mongoose');
 const { body, validationResult } = require('express-validator');
-const Category = require('../../models/categoryModel');
-const Menu = require('../../models/menuModel');
+// const Category = require('../../models/categoryModel');
+// const Menu = require('../../models/menuModel');
 const bcrypt = require("bcryptjs");
 const adminAuth = require("../../middleware/adminAuth");
 const { getHotelDb } = require("../../utils/dbSwitcher");
@@ -39,7 +39,7 @@ const upload = multer({
 });
 
 
-router.post('/addItem', upload.single('image'), [
+router.post('/addItem',adminAuth, upload.single('image'), [
   body('categoryId').notEmpty().withMessage('Category ID is required'),
   body('name').notEmpty().withMessage('Name is required'),
   body('price').notEmpty().withMessage('Price is required'),
@@ -63,7 +63,9 @@ router.post('/addItem', upload.single('image'), [
     }
 
     const imageUrl = `/uploads/food-images/${req.file.filename}`;
-
+    const hotelDb = getHotelDb(req.admin.hotelName);
+        const Category = hotelDb.model("Category", require("../../models/categoryModel"));
+        const Menu = hotelDb.model("Menu", require("../../models/menuModel"));
     const category = await Category.findById(categoryId);
     if (!category) {
       return res.status(404).json({ message: 'Category not found' });
@@ -89,7 +91,7 @@ router.post('/addItem', upload.single('image'), [
   }
 });
 
-router.delete('/deleteItem/:id', async (req, res) => {
+router.delete('/deleteItem/:id', adminAuth,async (req, res) => {
     const { id } = req.params;
   
     // Validate ID
@@ -99,6 +101,8 @@ router.delete('/deleteItem/:id', async (req, res) => {
   
     try {
       // Find item in DB
+      const hotelDb = getHotelDb(req.admin.hotelName);
+        const Menu = hotelDb.model("Menu", require("../../models/menuModel"));
       const item = await Menu.findById(id);
       if (!item) {
         return res.status(404).json({ message: 'Menu item not found.' });
@@ -123,13 +127,15 @@ router.delete('/deleteItem/:id', async (req, res) => {
     }
   });
 
-  router.put('/updateItem/:id', upload.single('image'), [
+  router.put('/updateItem/:id',adminAuth, upload.single('image'), [
     body('name').notEmpty().withMessage('Name is required'),
     body('price').notEmpty().isNumeric().withMessage('Price must be a number'),
     body('description').notEmpty().withMessage('Description is required'),
     body('categoryId').notEmpty().isMongoId().withMessage('Valid category ID is required'),
   ], async (req, res) => {
     try {
+      const hotelDb = getHotelDb(req.admin.hotelName);
+        const Menu = hotelDb.model("Menu", require("../../models/menuModel"));
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -174,8 +180,10 @@ router.delete('/deleteItem/:id', async (req, res) => {
   });
 
 
-router.get('/getItems', async (req, res) => {
+router.get('/getItems',adminAuth, async (req, res) => {
     try {
+      const hotelDb = getHotelDb(req.admin.hotelName);
+        const Menu = hotelDb.model("Menu", require("../../models/menuModel"));
       const items = await Menu.find().populate('category', 'name'); // Populating category name
       res.status(200).json({ success: true, items });
     } catch (error) {
@@ -184,8 +192,10 @@ router.get('/getItems', async (req, res) => {
     }
   });
 
-router.get('/getCategories', async (req, res) => {
+router.get('/getCategories',adminAuth, async (req, res) => {
     try {
+      const hotelDb = getHotelDb(req.admin.hotelName);
+        const Category = hotelDb.model("Category", require("../../models/categoryModel"));
       const categories = await Category.find();
       res.status(200).json({
         success: true,
@@ -200,7 +210,7 @@ router.get('/getCategories', async (req, res) => {
     }
   });
 
-  router.post('/addCategory', [
+  router.post('/addCategory',adminAuth, [
     body('name')
       .trim()
       .notEmpty()
@@ -215,6 +225,8 @@ router.get('/getCategories', async (req, res) => {
   
     try {
       // ✅ Check if category already exists
+      const hotelDb = getHotelDb(req.admin.hotelName);
+      const Category = hotelDb.model("Category", require("../../models/categoryModel"));
       const existing = await Category.findOne({ name: { $regex: `^${name}$`, $options: 'i' } });
       if (existing) {
         return res.status(409).json({ message: 'Category already exists' });
@@ -235,7 +247,7 @@ router.get('/getCategories', async (req, res) => {
     }
   });
 
-  router.delete('/deleteCategory/:id', async (req, res) => {
+  router.delete('/deleteCategory/:id',adminAuth, async (req, res) => {
     const categoryId = req.params.id;
   
     if (!mongoose.Types.ObjectId.isValid(categoryId)) {
@@ -244,6 +256,9 @@ router.get('/getCategories', async (req, res) => {
   
     try {
       // Check if any menu item is using this category
+      const hotelDb = getHotelDb(req.admin.hotelName);
+        const Menu = hotelDb.model("Menu", require("../../models/menuModel"));
+        const Category = hotelDb.model("Category", require("../../models/categoryModel"));
       const menuItems = await Menu.find({ category: categoryId });
   
       if (menuItems.length > 0) {
@@ -268,7 +283,7 @@ router.get('/getCategories', async (req, res) => {
     }
   });
   
-  router.put('/updateCategory/:id',
+  router.put('/updateCategory/:id',adminAuth,
     [
       body('name').trim().notEmpty().withMessage('Category name is required'),
     ],
@@ -287,6 +302,10 @@ router.get('/getCategories', async (req, res) => {
       const { name } = req.body;
   
       try {
+
+        const hotelDb = getHotelDb(req.admin.hotelName);
+        const Category = hotelDb.model("Category", require("../../models/categoryModel"));
+
         const updatedCategory = await Category.findByIdAndUpdate(
           categoryId,
           { name },
@@ -309,9 +328,7 @@ router.get('/getCategories', async (req, res) => {
   );
   
 
-  router.post(
-    "/create-chef",
-    adminAuth,
+  router.post("/create-chef",adminAuth,
     [
       body("chefId").notEmpty(),
       body("password").isLength({ min: 4 }),
@@ -356,7 +373,7 @@ router.get('/getCategories', async (req, res) => {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const hotelName = decoded.hotelName;
   
-      const qrUrl = `${process.env.FRONTEND_URL}/scan?hotel=${hotelName}&table=${tableNumber}`;
+      const qrUrl = `${process.env.FRONTEND_URL}scan?hotel=${hotelName}&table=${tableNumber}`;
       
       // Generate QR image as Data URL
       const qrImage = await QRCode.toDataURL(qrUrl);
@@ -367,5 +384,21 @@ router.get('/getCategories', async (req, res) => {
       res.status(500).json({ msg: "Failed to generate QR code" });
     }
   });
+
+router.get("/getAllOrders", adminAuth, async (req, res) => {
+  try {
+    const hotelDb = getHotelDb(req.admin.hotelName);
+    const Order = hotelDb.model("Order", require("../../models/orderModel"));
+
+    const orders = await Order.find()
+      .sort({ createdAt: -1 }) // Sort by newest first
+      .select("-__v"); // Exclude version key
+
+    res.json({ success: true, orders });
+  } catch (err) {
+    console.error("Error fetching orders:", err);
+    res.status(500).json({ msg: "Server error" });
+  }
+});
 
 module.exports = router;
