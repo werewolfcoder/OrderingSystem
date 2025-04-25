@@ -180,9 +180,21 @@ router.delete('/deleteItem/:id', adminAuth,async (req, res) => {
   });
 
 
-router.get('/getItems',adminAuth, async (req, res) => {
+router.get('/getItems',async (req, res) => {
+  //validate guest token
+  const token = req.header("Authorization");
+  if (!token) {
+    return res.status(401).json({ msg: "Access denied. No token provided." });
+  }
+  //get hotel name from token
+  const tokenString = token.startsWith('Bearer ') ? token.slice(7) : token;
+  const decoded = jwt.verify(tokenString, process.env.JWT_SECRET);
+  const { hotelName } = decoded;
+  if (!hotelName) {
+    return res.status(400).json({ msg: "Invalid token data." });
+  }
     try {
-      const hotelDb = getHotelDb(req.admin.hotelName);
+      const hotelDb = getHotelDb(hotelName);
         const Menu = hotelDb.model("Menu", require("../../models/menuModel"));
       const items = await Menu.find().populate('category', 'name'); // Populating category name
       res.status(200).json({ success: true, items });
@@ -192,11 +204,25 @@ router.get('/getItems',adminAuth, async (req, res) => {
     }
   });
 
-router.get('/getCategories',adminAuth, async (req, res) => {
+router.get('/getCategories', async (req, res) => {
+  const token = req.header("Authorization");
+  if (!token) {
+    return res.status(401).json({ msg: "Access denied. No token provided." });
+  }
+  //get hotel name from token
+  const tokenString = token.startsWith('Bearer ') ? token.slice(7) : token;
+  const decoded = jwt.verify(tokenString, process.env.JWT_SECRET);
+  const { hotelName } = decoded;
+  if (!hotelName) {
+    return res.status(400).json({ msg: "Invalid token data." });
+  }
     try {
-      const hotelDb = getHotelDb(req.admin.hotelName);
+      console.log(hotelName)
+      const hotelDb = getHotelDb(hotelName);
+      console.log(hotelDb.name)
         const Category = hotelDb.model("Category", require("../../models/categoryModel"));
       const categories = await Category.find();
+      console.log(categories)
       res.status(200).json({
         success: true,
         categories
